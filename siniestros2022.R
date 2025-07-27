@@ -11,17 +11,12 @@ library(readr)          # leer documentos
 library(janitor)        # renombrar columnas
 
 #cargar datos
-library(readr)
 df <- read_csv("C:/Users/User/OneDrive/Desktop/Personas lesionadas en siniestros de tránsito/siniestros2022.csv")
-View(siniestros2022)
-
 colnames(df)
 
-#Limpieza de los datos
-# Detectar solo columnas tipo texto y reemplazar "SIN DATOS" por NA
-df <- df %>%
-  mutate(across(where(is.character), ~na_if(.x, "SIN DATOS")))
 
+#Limpieza de los datos
+#Renombrar columnas
 df <- df %>%
   rename(
     dia_semana= `DI�a de la semana`,
@@ -34,26 +29,43 @@ df <- df %>%
     calle = 'Calle',
     zona = 'Zona',
     novedad = 'Novedad',
-    tipo_de_Vehiculo = 'Tipo de Vehiculo'
+    tipo_de_Vehiculo = 'Tipo de Vehiculo',
+    usa_casco = 'Usa casco'
   )
+# Detectar solo columnas tipo texto y reemplazar "SIN DATOS" por NA
+df <- df %>%
+  mutate(across(where(is.character), ~na_if(.x, "SIN DATOS")))
 
-
-#¿Usar casco o cinturón está asociado a menor gravedad en los siniestros?
-df %>%
-  filter(!is.na(usa_cinturon) & !is.na(tipo_de_resultado)) %>%
-  count(usa_cinturon, tipo_de_resultado) %>%
+#¿Usar casco está asociado a menor gravedad en los siniestros?
+#Valores correctos en tipo_de_resultado
+ casco <- df %>%
+  filter(!is.na(usa_casco), !is.na(tipo_de_resultado)) %>%
+  filter(tipo_de_resultado %in% c("HERIDO LEVE", "HERIDO GRAVE")) %>%
+  count(usa_casco, tipo_de_resultado) %>%
   pivot_wider(names_from = tipo_de_resultado, values_from = n, values_fill = 0)
-
+ 
+#Grafico usa casco si o no
 df %>%
-  filter(!is.na(usa_cinturon), !is.na(tipo_de_resultado)) %>%
-  count(usa_cinturon, tipo_de_resultado) %>%
-  ggplot(aes(x = usa_cinturon, y = n, fill = tipo_de_resultado)) +
-  geom_col(position = "fill") + 
+  filter(!is.na(usa_casco), !is.na(tipo_de_resultado)) %>%
+  filter(tipo_de_resultado %in% c("HERIDO LEVE", "HERIDO GRAVE")) %>%
+  count(usa_casco, tipo_de_resultado) %>%
+  ggplot(aes(x = usa_casco, y = n, fill = tipo_de_resultado)) +
+  geom_col(position = "fill") +
   scale_y_continuous(labels = scales::percent) +
-  labs(title = "Relación entre uso de cinturón y tipo de herida",
-       x = "¿Usaba cinturón?",
-       y = "Porcentaje dentro de cada grupo",
-       fill = "Tipo de resultado") +
+  labs(
+    title = "Proporción de tipo de herida según uso de casco",
+    x = "¿Usaba casco?",
+    y = "Proporción (%)",
+    fill = "Tipo de herida"
+  ) +
   theme_minimal()
+df
+#¿En qué días de la semana ocurren más siniestros?
+#Filtro pra resultados correctos
+df %>% 
+  filter(!is.na(dia_semana), !is.na(tipo_de_resultado)) %>%
+  filter(tipo_de_resultado %in% c("HERIDO LEVE", "HERIDO GRAVE")) %>%
+  count(dia_semana, tipo_de_resultado) %>%
+  pivot_wider(names_from = tipo_de_resultado, values_from = n, values_fill = 0)
 
 
