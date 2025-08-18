@@ -127,3 +127,61 @@ df %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
+#-------------------------------------------------------------------------------
+
+#¿Qué tipo de vehículo está más involucrado en siniestros graves o fatales?
+
+library(tidyverse)
+
+df %>% 
+  filter(!is.na(tipo_de_Vehiculo), !is.na(tipo_de_resultado)) %>%
+  filter(tipo_de_resultado %in% c("HERIDO GRAVE", 
+                                  "FALLECIDO EN CENTRO DE ASISTENCIA", 
+                                  "FALLECIDO EN EL LUGAR"),
+         tipo_de_Vehiculo != "CHAPA MATRICULA") %>%   
+  count(tipo_de_Vehiculo, tipo_de_resultado) %>%
+  pivot_wider(names_from = tipo_de_resultado, values_from = n, values_fill = 0) %>%
+  pivot_longer(cols = -tipo_de_Vehiculo,
+               names_to = "resultado",
+               values_to = "cantidad") %>%
+  group_by(tipo_de_Vehiculo) %>%
+  mutate(total = sum(cantidad)) %>%
+  ungroup() %>%
+  ggplot(aes(x = fct_reorder(tipo_de_Vehiculo, total), 
+             y = cantidad, fill = resultado)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Tipo de vehículo", y = "Cantidad", fill = "Resultado")
+
+#-------------------------------------------------------------------------------
+
+#¿Hay diferencias por sexo o edad en los siniestros con resultado fatal?
+
+class(df$edad)
+unique(df$edad)
+df$edad <- as.numeric(df$edad)
+
+#Filtro pra resultados correctos.
+df %>% 
+  filter(!is.na(edad), !is.na(Sexo)) %>%
+  filter(tipo_de_resultado %in% c("HERIDO LEVE", "HERIDO GRAVE", "FALLECIDO EN CENTRO DE ASISTENCIA", 
+                                  "FALLECIDO EN EL LUGAR")) %>%
+  count(Sexo, tipo_de_resultado) %>%
+  pivot_wider(names_from = tipo_de_resultado, values_from = n, values_fill = 0) 
+
+
+library(forcats)
+
+df %>%
+  filter(!is.na(Sexo)) %>%
+  mutate(grupo_edad = cut(edad, 
+                          breaks = c(0, 17, 29, 44, 59, 74, Inf), 
+                          labels = c("0-17", "18-29", "30-44", "45-59", "60-74", "75+"))) %>%
+  mutate(grupo_edad = fct_explicit_na(grupo_edad, na_level = "Desconocido")) %>%
+  count(Sexo, grupo_edad) %>%
+  ggplot(aes(x = grupo_edad, y = n, fill = Sexo)) +
+  geom_col(position = "dodge") +
+  labs(x = "Grupo etario", y = "Cantidad", title = "Fallecidos por sexo y edad")
+
+
+
